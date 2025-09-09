@@ -39,9 +39,14 @@ async def handle_tcp(reader: asyncio.StreamReader, writer: asyncio.StreamWriter)
     logger.info(f"Received from {addr}: {message}")
 
     # Response
-    writer.write(b"PONG\n")
-    await writer.drain()
-    logger.info(f"Sent PONG to {addr}")
+    if message == "PING":
+        writer.write(b"PONG\n")
+        await writer.drain()
+        logger.info(f"Sent PONG to {addr}")
+    else:
+        writer.write(b"ERR\n")
+        await writer.drain()
+        logger.info(f"Sent ERR to {addr}")
 
     # Close
     writer.close()
@@ -53,8 +58,12 @@ class PongUDP(asyncio.DatagramProtocol):
         message = data.decode().strip()
         logger.info(f"UDP datagram from {addr}: {message}")
 
-        self.transport.sendto(b"PONG", addr)
-        logger.info(f"Sent PONG to {addr}")
+        if message == "PING":
+            self.transport.sendto(b"PONG", addr)
+            logger.info(f"Sent PONG to {addr}")
+        else:
+            self.transport.sendto(b"ERR", addr)
+            logger.info(f"Sent ERR to {addr}")
 
     def connection_made(self, transport: asyncio.DatagramTransport):
         self.transport = transport
