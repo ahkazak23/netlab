@@ -64,21 +64,28 @@ class PongUDP(asyncio.DatagramProtocol):
 async def run_tcp_server(host: str = TCP_DEFAULT_HOST, port: int = TCP_DEFAULT_PORT):
     server = await asyncio.start_server(handle_tcp, host, port)
     logger.info(f"TCP server listening on {host}:{port}")
-    async with server:
+    try:
         await server.serve_forever()
+    except asyncio.CancelledError:
+        server.close()
+        await server.wait_closed()
+        raise
 
 
 async def run_udp_server(host: str = UDP_DEFAULT_HOST, port: int = UDP_DEFAULT_PORT):
     loop = asyncio.get_running_loop()
-    transport, protocol = await loop.create_datagram_endpoint(
+    transport, _ = await loop.create_datagram_endpoint(
         lambda: PongUDP(),
         local_addr=(host, port)
     )
     logger.info(f"UDP server listening on {host}:{port}")
     try:
         await asyncio.Future()
+    except asyncio.CancelledError:
+        pass
     finally:
         transport.close()
+        await asyncio.sleep(0)
 
 
 async def run_both():
